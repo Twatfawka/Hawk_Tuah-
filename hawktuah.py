@@ -32,8 +32,8 @@ class BuyIntentHandler(AbstractRequestHandler):
         if entitlement.status == "ENTITLED":
             speak_output = "You are already entitled to use this skill."
         else:
-            # Initiate buy process
-            speak_output = "To purchase this skill, please check your Alexa app."
+            # Initiate buy process with $1.99 price
+            speak_output = "To purchase this skill for $1.99, please check your Alexa app."
 
         return handler_input.response_builder.speak(speak_output).response
 
