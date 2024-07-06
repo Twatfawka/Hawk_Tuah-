@@ -1,56 +1,63 @@
-from ask_sdk_core.skill_builder import SkillBuilder
-from ask_sdk_core.dispatch_components import AbstractRequestHandler
-from ask_sdk_core.handler_input import HandlerInput
-from ask_sdk_core.utils import is_intent_name
-from ask_sdk_model import ui
+from kivy.lang import Builder
+from kivy.uix.screenmanager import ScreenManager, Screen
+from kivymd.app import MDApp
+from kivymd.uix.button import MDRaisedButton
+from kivymd.uix.dialog import MDDialog
+from kivymd.uix.boxlayout import MDBoxLayout
+import pyrebase
 
-sb = SkillBuilder()
+firebaseConfig = {
+    'apiKey': "YOUR_API_KEY",
+    'authDomain': "YOUR_PROJECT_ID.firebaseapp.com",
+    'databaseURL': "https://YOUR_PROJECT_ID.firebaseio.com",
+    'projectId': "YOUR_PROJECT_ID",
+    'storageBucket': "YOUR_PROJECT_ID.appspot.com",
+    'messagingSenderId': "YOUR_SENDER_ID",
+    'appId': "YOUR_APP_ID",
+    'measurementId': "YOUR_MEASUREMENT_ID"
+}
 
-class AskQuestionIntentHandler(AbstractRequestHandler):
-    def can_handle(self, handler_input):
-        return is_intent_name("AskQuestionIntent")(handler_input)
+firebase = pyrebase.initialize_app(firebaseConfig)
+auth = firebase.auth()
 
-    def handle(self, handler_input):
-        # Example of retrieving an audio file URL from S3
-        audio_url = "https://drive.google.com/file/d/16mECNZC95dGZ_eNNck71bf7vbMq-_4Ze/view?usp=drivesdk"
-        "
-        
-        # Building the response with audio playback
-        response_builder = handler_input.response_builder
-        response_builder.speak("Here's an audio response.")
-        response_builder.add_directive(ui.PlayDirective(ui.AudioItem(audio_url)))
-        
-        return response_builder.response
+class LoginScreen(Screen):
+    def do_login(self):
+        email = self.ids.email.text
+        password = self.ids.password.text
 
-class BuyIntentHandler(AbstractRequestHandler):
-    def can_handle(self, handler_input):
-        return is_intent_name("BuyIntent")(handler_input)
+        try:
+            auth.sign_in_with_email_and_password(email, password)
+            self.manager.current = 'home'
+        except:
+            self.show_alert_dialog()
 
-    def handle(self, handler_input):
-        # Check entitlement status
-        entitlement = handler_input.service_client_factory.get_monetization_service().get_in_skill_products()
-        if entitlement.status == "ENTITLED":
-            speak_output = "You are already entitled to use this skill."
-        else:
-            # Initiate buy process with $1.99 price
-            speak_output = "To purchase this skill for $1.99, please check your Alexa app."
+    def show_alert_dialog(self):
+        self.dialog = MDDialog(
+            title="Login Failed",
+            text="Invalid email or password.",
+            buttons=[
+                MDRaisedButton(
+                    text="OK", on_release=self.close_dialog
+                ),
+            ],
+        )
+        self.dialog.open()
 
-        return handler_input.response_builder.speak(speak_output).response
+    def close_dialog(self, obj):
+        self.dialog.dismiss()
 
-class CancelIntentHandler(AbstractRequestHandler):
-    def can_handle(self, handler_input):
-        return is_intent_name("CancelIntent")(handler_input)
+class HomeScreen(Screen):
+    pass
 
-    def handle(self, handler_input):
-        # Initiate cancel process
-        speak_output = "To cancel this skill, please check your Alexa app."
+class MainApp(MDApp):
+    def build(self):
+        self.theme_cls.primary_palette = "Blue"
+        self.theme_cls.theme_style = "Light"
+        return Builder.load_file('main.kv')
 
-        return handler_input.response_builder.speak(speak_output).response
+sm = ScreenManager()
+sm.add_widget(LoginScreen(name='login'))
+sm.add_widget(HomeScreen(name='home'))
 
-# Add all request handlers to the skill builder
-sb.add_request_handler(AskQuestionIntentHandler())
-sb.add_request_handler(BuyIntentHandler())
-sb.add_request_handler(CancelIntentHandler())
-
-# Lambda handler function
-lambda_handler = sb.lambda_handler()
+if __name__ == '__main__':
+    MainApp().run()
